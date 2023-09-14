@@ -1,5 +1,6 @@
 import logging
 
+from bs4 import BeautifulSoup
 from requests import RequestException
 
 from exceptions import ParserFindTagException
@@ -31,3 +32,13 @@ def unexpected_status_logging(url, card_status, expected_status):
         f'Статус в карточке: {card_status}\n'
         f'Ожидаемые статусы {expected_status}'
     )
+
+
+def get_soup(session, url):
+    response = get_response(session, url)
+
+    if response is None:
+        return
+
+    soup = BeautifulSoup(response.text, features='lxml')
+    return soup

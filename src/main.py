@@ -1,5 +1,6 @@
 import logging
 import re
+from collections import defaultdict
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
@@ -9,17 +10,17 @@ from tqdm import tqdm
 from configs import configure_argument_parser, configure_logging
 from constants import MAIN_DOC_URL, BASE_DIR, PEP_0_URL, EXPECTED_STATUS
 from outputs import control_output
-from utils import get_response, find_tag, unexpected_status_logging
+from exceptions import ParserFindTagException
+from utils import get_response, find_tag, unexpected_status_logging, get_soup
 
 
 def whats_new(session):
     whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
-    response = get_response(session, whats_new_url)
+    soup = get_soup(session, whats_new_url)
 
-    if response is None:
+    if soup is None:
         return
 
-    soup = BeautifulSoup(response.text, features='lxml')
     main_div = find_tag(soup, 'section', {'id': 'what-s-new-in-python'})
     div_with_url = find_tag(main_div, 'div', {'class': 'toctree-wrapper'})
     sections_by_python = div_with_url.find_all(
@@ -44,12 +45,11 @@ def whats_new(session):
 
 
 def latest_versions(session):
-    response = get_response(session, MAIN_DOC_URL)
+    soup = get_soup(session, MAIN_DOC_URL)
 
-    if response is None:
+    if soup is None:
         return
 
-    soup = BeautifulSoup(response.text, features='lxml')
     side_bar = find_tag(soup, 'div', {'class': 'sphinxsidebarwrapper'})
     ul_tags = side_bar.find_all('ul')
 
@@ -58,7 +58,7 @@ def latest_versions(session):
             a_tags = ul.find_all('a')
             break
     else:
-        raise Exception('Ничего не нашлось')
+        raise ParserFindTagException('Ничего не нашлось')
 
     results = [('Ссылка на документацию', 'Версия', 'Статус')]
     pattern = r'Python (?P<version>\d\.\d+) \((?P<status>.*)\)'
@@ -78,12 +78,11 @@ def latest_versions(session):
 
 def download(session):
     download_url = urljoin(MAIN_DOC_URL, 'download.html')
-    response = get_response(session, download_url)
+    soup = get_soup(session, download_url)
 
-    if response is None:
+    if soup is None:
         return
 
-    soup = BeautifulSoup(response.text, features='lxml')
     main_tag = find_tag(soup, 'div', {'role': 'main'})
     table_tag = find_tag(main_tag, 'table', {'class': 'docutils'})
     pdf_a4_tag = find_tag(
@@ -107,30 +106,30 @@ def download(session):
 
 
 def pep(session):
-    pep_0_page = get_response(session, PEP_0_URL)
-    soup = BeautifulSoup(pep_0_page.text, features='lxml')
-    section = soup.find('section', id='numerical-index')
-    tbody = section.find('tbody')
+    soup = get_soup(session, PEP_0_URL)
+
+    if soup is None:
+        return
+
+    section = find_tag(soup, 'section', {'id': 'numerical-index'})
+    tbody = find_tag(section, 'tbody')
     rows = tbody.find_all('tr')
 
-    statuses_count = {}
+    statuses_count = defaultdict(int)
 
     for row in rows:
-        type_and_status = row.find('abbr').text
+        type_and_status = find_tag(row, 'abbr').text
         pep_card_url = urljoin(PEP_0_URL, row.find('a')['href'])
 
         pep_card_page = get_response(session, pep_card_url)
         soup = BeautifulSoup(pep_card_page.text, features='lxml')
-        def_list = soup.find('dl', class_='rfc2822 field-list simple')
-        status_term = def_list.find(
-            lambda tag: tag.name == "dt" and "Status:" in tag.text
+        def_list = find_tag(soup, 'dl', {'class': 'rfc2822 field-list simple'})
+        status_term = find_tag(
+            def_list, lambda tag: tag.name == "dt" and "Status:" in tag.text
         )
         status = status_term.find_next('dd').find('abbr').text
 
-        if status in statuses_count:
-            statuses_count[status] += 1
-        else:
-            statuses_count[status] = 1
+        statuses_count[status] += 1
 
         if len(type_and_status) == 1:
             if status not in EXPECTED_STATUS['empty']:
@@ -166,14 +165,18 @@ def main():
     logging.info(f'Аргументы командной строки: {args}')
 
     session = CachedSession()
+
     if args.clear_cache:
         session.cache.clear()
 
     parser_mode = args.mode
-    results = MODE_TO_FUNCTION[parser_mode](session)
-
-    if results is not None:
-        control_output(results, args)
+    try:
+        results = MODE_TO_FUNCTION[parser_mode](session)
+        if results is not None:
+            control_output(results, args)
+    except Exception:
+        error_msg = f'Ошибка при выполнении с аргументом {parser_mode}'
+        logging.error(error_msg, stack_info=True)
 
     logging.info('Парсер завершил работу.')
 
