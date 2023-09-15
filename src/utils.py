@@ -40,5 +40,4 @@ def get_soup(session, url):
     if response is None:
         return
 
-    soup = BeautifulSoup(response.text, features='lxml')
-    return soup
+    return BeautifulSoup(response.text, features='lxml')

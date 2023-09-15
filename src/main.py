@@ -20,7 +20,6 @@ def whats_new(session):
 
     if soup is None:
         return
-
     main_div = find_tag(soup, 'section', {'id': 'what-s-new-in-python'})
     div_with_url = find_tag(main_div, 'div', {'class': 'toctree-wrapper'})
     sections_by_python = div_with_url.find_all(
@@ -32,10 +31,11 @@ def whats_new(session):
         version_a_tag = find_tag(section, 'a')
         href = version_a_tag['href']
         version_link = urljoin(whats_new_url, href)
-        response = get_response(session, version_link)
-        if response is None:
+        soup = get_soup(session, version_link)
+
+        if soup is None:
             continue
-        soup = BeautifulSoup(response.text, features='lxml')
+
         h1 = find_tag(soup, 'h1')
         dl = find_tag(soup, 'dl')
         dl_text = dl.text.replace('\n', ' ')
@@ -120,9 +120,11 @@ def pep(session):
     for row in rows:
         type_and_status = find_tag(row, 'abbr').text
         pep_card_url = urljoin(PEP_0_URL, row.find('a')['href'])
+        soup = get_soup(session, pep_card_url)
 
-        pep_card_page = get_response(session, pep_card_url)
-        soup = BeautifulSoup(pep_card_page.text, features='lxml')
+        if soup is None:
+            return
+
         def_list = find_tag(soup, 'dl', {'class': 'rfc2822 field-list simple'})
         status_term = find_tag(
             def_list, lambda tag: tag.name == "dt" and "Status:" in tag.text
