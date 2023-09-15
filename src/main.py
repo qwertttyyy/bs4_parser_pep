@@ -3,7 +3,6 @@ import re
 from collections import defaultdict
 from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup
 from requests_cache import CachedSession
 from tqdm import tqdm
 
@@ -11,7 +10,7 @@ from configs import configure_argument_parser, configure_logging
 from constants import MAIN_DOC_URL, BASE_DIR, PEP_0_URL, EXPECTED_STATUS
 from outputs import control_output
 from exceptions import ParserFindTagException
-from utils import get_response, find_tag, unexpected_status_logging, get_soup
+from utils import find_tag, unexpected_status_logging, get_soup
 
 
 def whats_new(session):
