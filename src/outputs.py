@@ -7,16 +7,16 @@ from prettytable import PrettyTable
 from constants import (
     BASE_DIR,
     FILE_OUTPUT_DT_FORMAT,
-    PRETTY_ARGUMENT,
-    FILE_ARGUMENT,
+    OUTPUT_FORMAT_PRETTY_TABLE,
+    OUTPUT_FORMAT_FILE,
 )
 
 
 def control_output(results, cli_args):
     output = cli_args.output
-    if output == PRETTY_ARGUMENT:
+    if output == OUTPUT_FORMAT_PRETTY_TABLE:
         pretty_output(results)
-    elif output == FILE_ARGUMENT:
+    elif output == OUTPUT_FORMAT_FILE:
         file_output(results, cli_args)
     else:
         default_output(results)

@@ -2,8 +2,8 @@ from pathlib import Path
 
 MAIN_DOC_URL = 'https://docs.python.org/3/'
 PEP_0_URL = 'https://peps.python.org/'
-PRETTY_ARGUMENT = 'pretty'
-FILE_ARGUMENT = 'file'
+OUTPUT_FORMAT_PRETTY_TABLE = 'pretty'
+OUTPUT_FORMAT_FILE = 'file'
 LOG_FORMAT = '%(asctime)s - [%(levelname)s] - %(message)s'
 LOGGING_DT_FORMAT = '%d.%m.%Y %H:%M:%S'
 LOGS_DIR_NAME = 'logs'
